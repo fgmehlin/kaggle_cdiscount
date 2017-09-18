@@ -5,13 +5,15 @@
 ```mkdir cdiscount
 cd cdiscount
 git init
-git clone https://github.com/fgmehlin/kaggle_cdiscount```
+git clone https://github.com/fgmehlin/kaggle_cdiscount
+```
 
 # Commit les changements
 ```git pull origin master
 git add .
 git commit -m "super commit message"
-git push origin master```
+git push origin master
+```
 
 ## `.gitignore`
 
