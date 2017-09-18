@@ -1,1 +1,11 @@
-# kaggle_cdiscount
+# kaggle Cdiscount
+
+## `.gitignore`
+
+- `input/train.bson`
+- `input/test.bson`
+
+## Sex
+
+
+
