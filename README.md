@@ -20,7 +20,6 @@ git push origin master
 - `input/train.bson`
 - `input/test.bson`
 
-## Sex
 
 
 
