@@ -3,3 +3,4 @@ input/test.bson
 input/validation/*
 input/train/*
 input/test/*
+*.h5
