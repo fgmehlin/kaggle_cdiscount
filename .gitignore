@@ -1,2 +1,5 @@
 input/train.bson
 input/test.bson
+input/validation/*
+input/train/*
+input/test/*
