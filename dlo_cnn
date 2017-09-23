@@ -1,0 +1,90 @@
+
+
+import os
+import glob
+from scipy import misc
+import numpy as np
+import keras.models as models
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPool2D
+from keras.layers import Activation, Dropout, Flatten, Dense, BatchNormalization
+from keras import backend as K
+from keras.preprocessing.image import ImageDataGenerator
+from tqdm import tqdm_notebook as tqdmn
+from keras.callbacks import LearningRateScheduler, ModelCheckpoint
+
+img_width = 180
+img_height = 180
+n_channel = 3
+train_folder = '/home/dlo/Documents/cdiscount/input/train'
+validation_folder = '/home/dlo/Documents/cdiscount/input/validation'
+test_folder = '/home/dlo/Documents/cdiscount/input/test'
+
+class_list = os.listdir(train_folder)
+n_classes = len(class_list)
+n_train_examples = 12371293 #adapt
+n_test_examples = 3095080
+
+class_list = os.listdir(train_folder)
+n_classes = len(class_list)
+n_train_examples = 12371293 #adapt
+n_test_examples = 3095080
+
+
+checkpointer = ModelCheckpoint(filepath="weights0.hdf5", monitor='val_acc', verbose=1, save_best_only=True)
+cnn = models.Sequential()
+
+cnn.add(Conv2D(filters=32, kernel_size = (4,4),strides=(2,2), activation='relu', padding='same', input_shape = (img_width,img_height,3)))
+cnn.add(BatchNormalization())
+cnn.add(Conv2D(filters=32, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(MaxPool2D(strides=(2,2)))
+cnn.add(BatchNormalization())
+
+cnn.add(Conv2D(filters=64, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(BatchNormalization())
+cnn.add(Conv2D(filters=64, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(MaxPool2D(strides=(2,2)))
+cnn.add(BatchNormalization())
+
+cnn.add(Conv2D(filters=128, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(BatchNormalization())
+cnn.add(Conv2D(filters=128, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(MaxPool2D(strides=(2,2)))
+cnn.add(BatchNormalization())
+
+cnn.add(Conv2D(filters=256, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(BatchNormalization())
+cnn.add(Conv2D(filters=256, kernel_size=(3,3), activation='relu', padding='same'))
+cnn.add(MaxPool2D(strides=(2,2)))
+cnn.add(BatchNormalization())
+
+
+cnn.add(Flatten())
+cnn.add(Dense(700, activation='relu'))
+cnn.add(Dropout(0.5))
+cnn.add(Dense(n_classes, activation='softmax'))
+
+cnn.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+cnn.summary()
+batch_size=32
+
+train_datagen = ImageDataGenerator(
+        rescale=1./255,
+        shear_range=0.1,
+        zoom_range=0.1,
+        horizontal_flip=True)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+train_generator = train_datagen.flow_from_directory(
+        'input/train',  
+        target_size=(img_height, img_width), 
+        batch_size=batch_size)
+
+test_generator = test_datagen.flow_from_directory(
+        'input/validation',
+        target_size=(img_height, img_width),
+        batch_size=batch_size)
+
+print("Training starts")
+cnn.fit_generator(train_generator, steps_per_epoch=400, epochs=20, verbose=1, validation_data=test_generator,validation_steps=100,callbacks=[checkpointer])
