@@ -51,6 +51,7 @@ x = Activation('softmax')(x)
 -You can make the Stem module reduce a bit less spatially by changing all the padding type to 'same'.
 -You can make the overall network less expensive by reducing the depth of the output of the modules. To do that, use the fagFactor passed as argument to the modules. You should use a fagFactor between 0 and 0.8, where the bigger the fagFactor, the smaller the network. A fagFactor of 0 will use the default dimension of Google's InceptionV4
 
+
 """
 
 def stem(img_input, fagFactor) : # Stem module, processes input of shape (a, a, 3) and ouputs tensor of shape ~ (a/10, a/10, 384), to be passed to an Inception module
@@ -184,11 +185,11 @@ def inceptMed(x, fagFactor) : # Inception-B module that takes input of size (a, 
 
 	branch3 = Conv2D(int(fagFactor*224), (1, 7), padding='same')(branch3)
 	branch3 = BatchNormalization(axis=3,scale=False)(branch3)
-	branch3 = Activation('relu')(branch3a)
+	branch3 = Activation('relu')(branch3)
 
 	branch3 = Conv2D(int(fagFactor*256), (1, 7), padding='same')(branch3)
 	branch3 = BatchNormalization(axis=3,scale=False)(branch3)
-	branch3 = Activation('relu')(branch3a)
+	branch3 = Activation('relu')(branch3)
 
 	branch4 = Conv2D(int(fagFactor*192), (1, 1), padding='same')(x)
 	branch4 = BatchNormalization(axis=3,scale=False)(branch4)
@@ -210,7 +211,7 @@ def inceptMed(x, fagFactor) : # Inception-B module that takes input of size (a, 
 	branch4 = BatchNormalization(axis=3,scale=False)(branch4)
 	branch4 = Activation('relu')(branch4)
 
-	x = layers.concatenate([branch1, branch2, branch3a, branch3b, branch4a, branch4b], axis=3)
+	x = layers.concatenate([branch1, branch2, branch3, branch4], axis=3)
 
 	return x
 	
@@ -270,31 +271,36 @@ def inceptSmall(x, fagFactor) : # Inception-C that takes input of size (a, a, b)
 	return x
 
 
-def reduceMedToSmall(x) : # Reduction-B module that takes input of size ~ (a, a, b) and outputs (c, c, ~1536) with c ~= a/2. a should be ~=7
-
+def reduceMedToSmall(x, fagFactor) : # Reduction-B module that takes input of size ~ (a, a, b) and outputs (c, c, ~1536) with c ~= a/2. a should be ~=7
+	
+	if fagFactor < 0 :
+		raise ValueError('fagFactor cannot be negative')
+	if fagFactor > 0.9 :
+		raise ValueError('fagFactor cannot be larger than 0.8')
+	fagFactor = 1.0-fagFactor
 	branch1 = MaxPool2D((3,3), strides=(2,2), padding = 'valid')(x)
 
-	branch2 = Conv2D(192, (1, 1), padding='same')(x)
+	branch2 = Conv2D(int(fagFactor*192), (1, 1), padding='same')(x)
 	branch2 = BatchNormalization(axis=3,scale=False)(branch2)
 	branch2 = Activation('relu')(branch2)
 
-	branch2 = Conv2D(192, (3, 3), strides=(2,2), padding='valid')(branch2)
+	branch2 = Conv2D(int(fagFactor*192), (3, 3), strides=(2,2), padding='valid')(branch2)
 	branch2 = BatchNormalization(axis=3,scale=False)(branch2)
 	branch2 = Activation('relu')(branch2)
 
-	branch3 = Conv2D(256, (1, 1), padding='same')(x)
+	branch3 = Conv2D(int(fagFactor*256), (1, 1), padding='same')(x)
 	branch3 = BatchNormalization(axis=3,scale=False)(branch3)
 	branch3 = Activation('relu')(branch3)
 
-	branch3 = Conv2D(256, (1, 7), padding='same')(branch3)
+	branch3 = Conv2D(int(fagFactor*256), (1, 7), padding='same')(branch3)
 	branch3 = BatchNormalization(axis=3,scale=False)(branch3)
 	branch3 = Activation('relu')(branch3)
 
-	branch3 = Conv2D(320, (7, 1), padding='same')(branch3)
+	branch3 = Conv2D(int(fagFactor*320), (7, 1), padding='same')(branch3)
 	branch3 = BatchNormalization(axis=3,scale=False)(branch3)
 	branch3 = Activation('relu')(branch3)
 
-	branch3 = Conv2D(320, (3, 3), strides=(2,2), padding='valid')(branch3)
+	branch3 = Conv2D(int(fagFactor*320), (3, 3), strides=(2,2), padding='valid')(branch3)
 	branch3 = BatchNormalization(axis=3,scale=False)(branch3)
 	branch3 = Activation('relu')(branch3)
 
@@ -321,9 +327,11 @@ n_test_examples = 3095080 # Change to what you want
 
 # Build network
 
+fagFactor = 0
 img_input = Input(shape=(img_width,img_height,n_channel)) # Here I have set img_width and img_height to 80. -> img_input is the Input layer with shape (80,80,3)
-x = stem(img_input, 0) # apply the Stem module on the Input layer and return x of shape (7,7,384)
-x = inceptSmall(x) # apply the Inception-C module on x, and returns x with shape (7,7,1536)
+x = stem(img_input, fagFactor) # apply the Stem module on the Input layer and return x of shape (7,7,384)
+x = inceptSmall(x,fagFactor) # apply the Inception-C module on x, and returns x with shape (7,7,1536)
+x = inceptSmall(x,fagFactor) # apply the Inception-C module on x, and returns x with shape (7,7,1536)
 x = GlobalAveragePooling2D()(x) # Average pool spatially on x, returns x with shape (1536)
 x = Dropout(0.2)(x) # Drops 20% of above activations during training
 x = Dense(n_classes)(x) 
